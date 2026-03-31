@@ -1,0 +1,9 @@
+version: '3.8'
+
+services:
+  nous-web:
+    build: .
+    container_name: nous-web
+    ports:
+      - "5061:80"
+    restart: unless-stopped
