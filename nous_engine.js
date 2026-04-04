@@ -1,5 +1,23 @@
+import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js";
+import { getFirestore, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDRX4hmyam-AwwvnrkHR9atBHuRiY9WwVw",
+  authDomain: "dominio-deft-work.firebaseapp.com",
+  projectId: "dominio-deft-work",
+  storageBucket: "dominio-deft-work.firebasestorage.app",
+  messagingSenderId: "786211428280",
+  appId: "1:786211428280:web:f862daf55e1a323683a14d",
+  measurementId: "G-2RLW5J6J3F"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
 const canvas = document.getElementById('nousCanvas');
 const ctx = canvas.getContext('2d');
+
+let infrastructureData = null;
 
 let width, height;
 let particles = [];
@@ -100,19 +118,59 @@ class Particle {
         ctx.fillStyle = this.color;
         
         let opacity = this.life === Infinity ? 0.7 : this.life / 100;
+
+        // Si es una partícula vinculada a infraestructura real, brilla más
+        if (this.isStation) {
+            opacity = 1.0;
+            ctx.shadowBlur = 20;
+            ctx.shadowColor = this.color;
+        }
+
         ctx.globalAlpha = opacity;
         ctx.fill();
         ctx.globalAlpha = 1.0;
         
         // Brillo sutil
-        if (this.radius > 2) {
-            ctx.shadowBlur = 10;
+        if (this.radius > 2 || this.isStation) {
+            ctx.shadowBlur = this.isStation ? 25 : 10;
             ctx.shadowColor = this.color;
             ctx.fill();
             ctx.shadowBlur = 0;
         }
+        
+        if (this.label) {
+            ctx.fillStyle = "#fff";
+            ctx.font = "10px monospace";
+            ctx.fillText(this.label, this.x + 10, this.y + 5);
+        }
     }
 }
+
+// Estaciones de Infraestructura (Nodos Fijos)
+const stations = {
+    m2: new Particle(width * 0.3, height * 0.5),
+    gcp: new Particle(width * 0.7, height * 0.4),
+    mcp: new Particle(width * 0.35, height * 0.6)
+};
+
+stations.m2.isStation = true;
+stations.m2.radius = 8;
+stations.m2.color = "#00d2ff";
+stations.m2.label = "NEXO_M2";
+stations.m2.vx = stations.m2.vy = 0; // Estático
+
+stations.gcp.isStation = true;
+stations.gcp.radius = 6;
+stations.gcp.color = "#00ffa3"; // Verde Neón para GCP
+stations.gcp.label = "GCP_ESTANDARTE";
+stations.gcp.vx = stations.gcp.vy = 0;
+
+stations.mcp.isStation = true;
+stations.mcp.radius = 5;
+stations.mcp.color = "#a855f7"; // Púrpura para MCP
+stations.mcp.label = "GCLOUD_MCP";
+stations.mcp.vx = 0.5; // Ligero balanceo
+stations.mcp.vy = 0.2;
 
 // Iniciar red
 for (let i = 0; i < 120; i++) {
@@ -169,8 +227,47 @@ function animate() {
         }
     }
 
+    // Dibujar y actualizar estaciones fijas
+    Object.values(stations).forEach(s => {
+        // Si hay datos, hacer que el tamaño de M2 pulse con la CPU
+        if (s.label === "NEXO_M2" && infrastructureData?.node_m2) {
+            s.radius = 8 + (infrastructureData.node_m2.cpu_percent / 20);
+        }
+        
+        // Si el MCP no está activo, atenuarlo
+        if (s.label === "GCLOUD_MCP" && infrastructureData?.mcp) {
+            s.color = infrastructureData.mcp.active ? "#a855f7" : "#4b5563";
+        }
+
+        s.update();
+        s.draw();
+        
+        // Nexos automáticos entre estaciones
+        ctx.beginPath();
+        ctx.moveTo(stations.m2.x, stations.m2.y);
+        ctx.lineTo(stations.gcp.x, stations.gcp.y);
+        ctx.strokeStyle = "rgba(212, 175, 55, 0.2)";
+        ctx.setLineDash([5, 15]); // Línea discontinua para el túnel local-nube
+        ctx.stroke();
+        ctx.setLineDash([]);
+    });
+
     requestAnimationFrame(animate);
 }
 
-// Spark
+// Conexión en tiempo real con la infraestructura
+onSnapshot(doc(db, "metadata", "infrastructure"), (doc) => {
+    if (doc.exists()) {
+        infrastructureData = doc.data();
+        console.log("Telemetría actualizada:", infrastructureData);
+        
+        // Actualizar UI básica
+        const statusText = document.querySelector('.status-indicator span:last-child');
+        if (statusText && infrastructureData.node_m2) {
+            statusText.innerText = `NEXO_M2 // CPU: ${infrastructureData.node_m2.cpu_percent}%`;
+        }
+    }
+});
+
+// Spark: Iniciamos el bucle de animación
 setTimeout(animate, 100);
