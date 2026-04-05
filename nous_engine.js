@@ -10,7 +10,13 @@ const db = getFirestore(app);
 const canvas = document.getElementById('nousCanvas');
 const ctx = canvas.getContext('2d');
 
-let infrastructureData = null;
+let infrastructureData = null; // Telemetría (Firestore)
+let staticInfra = null;      // Cartografía (JSON)
+
+const infraPanel = document.getElementById('infra-panel');
+const infraContent = document.getElementById('infra-content');
+const netToggle = document.getElementById('net-toggle');
+const closePanel = document.getElementById('close-panel');
 
 let width, height;
 let particles = [];
@@ -140,35 +146,124 @@ class Particle {
 }
 
 // Estaciones de Infraestructura (Nodos Fijos)
-const stations = {
-    m2: new Particle(width * 0.3, height * 0.5),
-    gcp: new Particle(width * 0.7, height * 0.4),
-    mcp: new Particle(width * 0.35, height * 0.6)
-};
+let stations = {};
 
-stations.m2.isStation = true;
-stations.m2.radius = 8;
-stations.m2.color = "#00d2ff";
-stations.m2.label = "NEXO_M2";
-stations.m2.vx = stations.m2.vy = 0; // Estático
-
-stations.gcp.isStation = true;
-stations.gcp.radius = 6;
-stations.gcp.color = "#00ffa3"; // Verde Neón para GCP
-stations.gcp.label = "GCP_ESTANDARTE";
-stations.gcp.vx = stations.gcp.vy = 0;
-
-stations.mcp.isStation = true;
-stations.mcp.radius = 5;
-stations.mcp.color = "#a855f7"; // Púrpura para MCP
-stations.mcp.label = "GCLOUD_MCP";
-stations.mcp.vx = 0.5; // Ligero balanceo
-stations.mcp.vy = 0.2;
-
-// Iniciar red
-for (let i = 0; i < 120; i++) {
-    particles.push(new Particle());
+async function fetchInfrastructure() {
+    try {
+        const response = await fetch('infrastructure.json');
+        staticInfra = await response.json();
+        renderInfraPanel();
+        initializeStations();
+    } catch (error) {
+        console.error("Error cargando cartografía:", error);
+        infraContent.innerHTML = "<p class='error'>Error al leer protocolos de red.</p>";
+    }
 }
+
+function initializeStations() {
+    if (!staticInfra) return;
+    
+    // Posicionamiento inteligente basado en Tier
+    staticInfra.nodes.forEach((node, index) => {
+        let x, y, color, radius;
+        
+        switch(node.tier) {
+            case 'local':
+                x = width * (0.2 + (index * 0.1));
+                y = height * 0.5;
+                color = "#00d2ff"; // Azul Neón
+                radius = 8;
+                break;
+            case 'cloud':
+                x = width * 0.8;
+                y = height * 0.3;
+                color = "#00ffa3"; // Verde Neón
+                radius = 6;
+                break;
+            case 'edge':
+                x = width * (0.4 + (index * 0.05));
+                y = height * 0.7;
+                color = "#a855f7"; // Púrpura
+                radius = 5;
+                break;
+            default:
+                x = Math.random() * width;
+                y = Math.random() * height;
+                color = "#fff";
+                radius = 4;
+        }
+
+        const p = new Particle(x, y);
+        p.isStation = true;
+        p.radius = radius;
+        p.color = color;
+        p.label = node.id.toUpperCase();
+        p.vx = p.vy = 0;
+        stations[node.id] = p;
+    });
+
+    // Iniciar red de partículas aleatorias (relleno)
+    for (let i = 0; i < 100; i++) {
+        particles.push(new Particle());
+    }
+}
+
+function renderInfraPanel() {
+    if (!staticInfra) return;
+
+    let html = '';
+    
+    // Agrupar por Tier
+    const tiers = {
+        'local': 'INFRAESTRUCTURA_LOCAL (CABLE)',
+        'cloud': 'INFRAESTRUCTURA_NUBE (GCP)',
+        'edge': 'INFRAESTRUCTURA_EDGE (WIFI)'
+    };
+
+    Object.entries(tiers).forEach(([tierKey, tierTitle]) => {
+        const nodes = staticInfra.nodes.filter(n => n.tier === tierKey);
+        if (nodes.length > 0) {
+            html += `
+            <div class="infra-tier">
+                <h3>${tierTitle}</h3>
+                <div class="nodes-list">
+                    ${nodes.map(n => `
+                        <div class="node-item">
+                            <span class="node-name">${n.name}</span>
+                            <span class="node-role">${n.role}</span>
+                            <div class="node-meta">${n.ip_local || n.ip_publica || 'IP: DINÁMICA'} // ${n.interface}</div>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>`;
+        }
+    });
+
+    // Dominios
+    html += `
+    <div class="infra-tier">
+        <h3>DOMINIOS_OPERATIVOS</h3>
+        <div class="domain-grid">
+            ${[...staticInfra.domains.core, ...staticInfra.domains.satellites, ...staticInfra.domains.decentralized].map(d => `
+                <div class="domain-item">
+                    <a href="https://${d.url}" target="_blank" class="domain-url">${d.url}</a>
+                    <span class="node-role">${d.service}</span>
+                </div>
+            `).join('')}
+        </div>
+    </div>`;
+
+    infraContent.innerHTML = html;
+}
+
+// Eventos de Panel
+netToggle.addEventListener('click', () => {
+    infraPanel.classList.toggle('hidden');
+});
+
+closePanel.addEventListener('click', () => {
+    infraPanel.classList.add('hidden');
+});
 
 function animate() {
     ctx.clearRect(0, 0, width, height);
@@ -223,7 +318,7 @@ function animate() {
     // Dibujar y actualizar estaciones fijas
     Object.values(stations).forEach(s => {
         // Si hay datos, hacer que el tamaño de M2 pulse con la CPU
-        if (s.label === "NEXO_M2" && infrastructureData?.node_m2) {
+        if (s.label === "M2" && infrastructureData?.node_m2) {
             s.radius = 8 + (infrastructureData.node_m2.cpu_percent / 20);
         }
         
@@ -235,14 +330,16 @@ function animate() {
         s.update();
         s.draw();
         
-        // Nexos automáticos entre estaciones
-        ctx.beginPath();
-        ctx.moveTo(stations.m2.x, stations.m2.y);
-        ctx.lineTo(stations.gcp.x, stations.gcp.y);
-        ctx.strokeStyle = "rgba(212, 175, 55, 0.2)";
-        ctx.setLineDash([5, 15]); // Línea discontinua para el túnel local-nube
-        ctx.stroke();
-        ctx.setLineDash([]);
+        // Nexos automáticos entre estaciones (Local -> Cloud)
+        if (stations.m2 && stations.gcp) {
+            ctx.beginPath();
+            ctx.moveTo(stations.m2.x, stations.m2.y);
+            ctx.lineTo(stations.gcp.x, stations.gcp.y);
+            ctx.strokeStyle = "rgba(212, 175, 55, 0.2)";
+            ctx.setLineDash([5, 15]); // Línea discontinua para el túnel local-nube
+            ctx.stroke();
+            ctx.setLineDash([]);
+        }
     });
 
     requestAnimationFrame(animate);
@@ -262,5 +359,6 @@ onSnapshot(doc(db, "metadata", "infrastructure"), (doc) => {
     }
 });
 
-// Spark: Iniciamos el bucle de animación
+// Spark: Iniciamos el bucle de animación y carga de infra
+fetchInfrastructure();
 setTimeout(animate, 100);
