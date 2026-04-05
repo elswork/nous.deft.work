@@ -1,15 +1,8 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js";
 import { getFirestore, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
 
-const firebaseConfig = {
-  apiKey: "AIzaSyDRX4hmyam-AwwvnrkHR9atBHuRiY9WwVw",
-  authDomain: "dominio-deft-work.firebaseapp.com",
-  projectId: "dominio-deft-work",
-  storageBucket: "dominio-deft-work.firebasestorage.app",
-  messagingSenderId: "786211428280",
-  appId: "1:786211428280:web:f862daf55e1a323683a14d",
-  measurementId: "G-2RLW5J6J3F"
-};
+// La configuración se carga desde config.js (no rastreado por git)
+const firebaseConfig = CONFIG.firebaseConfig;
 
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
