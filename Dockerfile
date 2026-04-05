@@ -7,6 +7,8 @@ FROM nginx:alpine
 COPY index.html /usr/share/nginx/html/
 COPY estilo.css /usr/share/nginx/html/
 COPY nous_engine.js /usr/share/nginx/html/
+COPY config.js /usr/share/nginx/html/
+COPY infrastructure.json /usr/share/nginx/html/
 
 # Exponer el puerto para el M2
 EXPOSE 80
