@@ -1,0 +1,78 @@
+{
+  "project": "Anticitera",
+  "version": "1.0.0",
+  "nodes": [
+    {
+      "id": "m2",
+      "name": "M2 Nexo",
+      "tier": "local",
+      "connection": "cable",
+      "ip_local": "192.168.1.75",
+      "dns_publico": "uwas.deft.work",
+      "interface": "MCP (Port 3000) / API (Technitium)",
+      "role": "Arquitecto / Gatekeeper / DNS Maestro"
+    },
+    {
+      "id": "hc1",
+      "name": "HC1 Soporte",
+      "tier": "local",
+      "connection": "cable",
+      "ip_local": "192.168.1.27",
+      "interface": "SSH",
+      "role": "Nodo de Soporte / Gatekeeper Anterior"
+    },
+    {
+      "id": "gcp",
+      "name": "GCP Estandarte",
+      "tier": "cloud",
+      "connection": "internet",
+      "ip_publica": "104.155.166.27",
+      "interface": "MCP / API (Technitium)",
+      "role": "Public Resolver / Estandarte"
+    },
+    {
+      "id": "legion",
+      "name": "Legion PC",
+      "tier": "edge",
+      "connection": "wifi",
+      "ip_local": "192.168.1.34",
+      "interface": "SSH (WSL)",
+      "role": "Estación de Control"
+    },
+    {
+      "id": "chromebook",
+      "name": "Chromebook",
+      "tier": "edge",
+      "connection": "wifi",
+      "role": "Despliegue Táctico Auxiliar"
+    }
+  ],
+  "domains": {
+    "core": [
+      { "url": "uwas.deft.work", "service": "WAF / Proxy" },
+      { "url": "portainer.deft.work", "service": "Portainer Global" },
+      { "url": "portainerm2.deft.work", "service": "Docker M2" },
+      { "url": "minio.deft.work", "service": "S3 Storage" },
+      { "url": "cykms.deft.work", "service": "CyKMS" },
+      { "url": "deft.work", "service": "Root Domain" }
+    ],
+    "satellites": [
+      { "url": "jarraypedal.deft.work", "service": "Proyecto Jarrá y Pedal" },
+      { "url": "cv-eloy.deft.work", "service": "Landing CV" },
+      { "url": "dl4.eu", "service": "DL4 External" }
+    ],
+    "decentralized": [
+      { "url": "anticitera.deft.work", "service": "Landing Anticitera", "provider": "GitHub/Firebase" },
+      { "url": "free.deft.work", "service": "SGIA Nexus", "provider": "GitHub/Firebase" },
+      { "url": "love.deft.work", "service": "AI Discovery Engine", "provider": "GitHub/Firebase" },
+      { "url": "dominio.deft.work", "service": "Sandbox Operaciones", "provider": "GitHub/Firebase" }
+    ]
+  },
+  "protocols": {
+    "technitium": "API",
+    "github": "MCP",
+    "uwas": "MCP",
+    "firebase": "MCP",
+    "gws": "MCP"
+  }
+}
