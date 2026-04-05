@@ -160,6 +160,8 @@ async function fetchInfrastructure() {
     }
 }
 
+}
+
 function initializeStations() {
     if (!staticInfra) return;
     
@@ -201,7 +203,9 @@ function initializeStations() {
         p.vx = p.vy = 0;
         stations[node.id] = p;
     });
+}
 
+function initBackgroundNetwork() {
     // Iniciar red de partículas aleatorias (relleno)
     for (let i = 0; i < 100; i++) {
         particles.push(new Particle());
@@ -360,5 +364,6 @@ onSnapshot(doc(db, "metadata", "infrastructure"), (doc) => {
 });
 
 // Spark: Iniciamos el bucle de animación y carga de infra
+initBackgroundNetwork();
 fetchInfrastructure();
 setTimeout(animate, 100);
