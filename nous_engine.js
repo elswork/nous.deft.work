@@ -160,8 +160,6 @@ async function fetchInfrastructure() {
     }
 }
 
-}
-
 function initializeStations() {
     if (!staticInfra) return;
     
