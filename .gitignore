@@ -2,9 +2,12 @@
 config.js
 .env
 .env.local
+firebase.json*
+.firebaserc*
 
-# Backups de configuración (renombrados ayer)
+# Backups y archivos deshabilitados
 *.backup
+*.disabled
 
 # Logs y dependencias
 node_modules/
